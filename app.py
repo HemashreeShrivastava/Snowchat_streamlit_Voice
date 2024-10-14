@@ -3,9 +3,11 @@ import io
 import pandas as pd
 import streamlit as st
 import snowflake.connector
-from gpt import OpenAIService 
-import speech_recognition as sr
-import time
+from gpt import OpenAIService
+import audio_recorder_streamlit as ar  # Import audio_recorder_streamlit for recording audio
+from pydub import AudioSegment
+from pydub.playback import play
+import tempfile
 
 # Set wide layout for Streamlit app
 st.set_page_config(layout="wide")
@@ -143,34 +145,28 @@ def validate_sql(sql):
             return False, keyword
     return True, None
 
-# Function to get audio input
+# Function to get audio input using audio_recorder_streamlit
 def get_audio():
-    recognizer = sr.Recognizer()
+    audio_bytes = ar.audio_recorder()  # This function records audio directly from the browser
 
-    # Use the microphone as the audio source
-    with sr.Microphone() as source:
-        st.write("Listening... Please speak after a few seconds.")
-        #time.sleep(1)  
-        recognizer.adjust_for_ambient_noise(source)
+    if audio_bytes:
+        st.audio(audio_bytes, format="audio/wav")  # Play back the recorded audio
+        st.write("Audio captured successfully")
 
-        try:
-            audio = recognizer.listen(source, timeout=3)  
-            st.write("Recognizing...")
-            text = recognizer.recognize_google(audio)
-            st.write("You said: ", text)
-            return text  
+        # Save the audio to a temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio_file:
+            temp_audio_file.write(audio_bytes)
+            audio_path = temp_audio_file.name
 
-        except sr.WaitTimeoutError:
-            st.write("Listening timed out while waiting for phrase to start")
-            return "No speech detected"
+        # Use Pydub to convert the audio file for further processing (if needed)
+        audio_segment = AudioSegment.from_wav(audio_path)
 
-        except sr.UnknownValueError:
-            st.write("Google Web Speech API could not understand audio")
-            return "Could not understand audio"
-
-        except sr.RequestError as e:
-            st.write(f"Could not request results from Google Web Speech API; {e}")
-            return "API error"
+        # Display the duration of the recorded audio
+        st.write(f"Duration of the audio: {len(audio_segment) / 1000:.2f} seconds")
+        return audio_path
+    else:
+        st.write("No audio recorded")
+        return None
 
 # Main app logic
 if __name__ == "__main__":
@@ -204,9 +200,10 @@ if __name__ == "__main__":
     with col2:
         st.markdown('<div class="centered-button">', unsafe_allow_html=True)
         if st.button("🎤 Query by voice"):
-            speech_input = get_audio()  
-            if speech_input:
-                st.session_state.question = speech_input
+            audio_file_path = get_audio()  
+            if audio_file_path:
+                # You would need to integrate speech-to-text processing here
+                st.session_state.question = "Recognized speech goes here"
         st.markdown('</div>', unsafe_allow_html=True)
 
     # Check if a question has been entered via text or speech
