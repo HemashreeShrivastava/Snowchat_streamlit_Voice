@@ -6,4 +6,4 @@ matplotlib
 plotly_express
 scikit-learn
 SpeechRecognition
-PyAudio==0.2.11
+PyAudio==0.2.14
