@@ -6,4 +6,5 @@ matplotlib
 plotly_express
 scikit-learn
 SpeechRecognition==3.8.1
+PyAudio==0.2.11
 sounddevice
