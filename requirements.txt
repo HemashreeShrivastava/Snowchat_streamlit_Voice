@@ -5,5 +5,5 @@ openai==0.27.6
 matplotlib
 plotly_express
 scikit-learn
-SpeechRecognition
-
+SpeechRecognition==3.8.1
+PyAudio==0.2.14
