@@ -3,8 +3,10 @@ import io
 import pandas as pd
 import streamlit as st
 import snowflake.connector
-from gpt import OpenAIService 
+from gpt import OpenAIService
 import speech_recognition as sr
+import sounddevice as sd
+import numpy as np
 import time
 
 # Set wide layout for Streamlit app
@@ -143,34 +145,36 @@ def validate_sql(sql):
             return False, keyword
     return True, None
 
-# Function to get audio input
+# Function to get audio input using sounddevice
 def get_audio():
     recognizer = sr.Recognizer()
 
-    # Use the microphone as the audio source
-    with sr.Microphone() as source:
+    def callback(indata, frames, time, status):
+        audio_data.append(indata.copy())
+
+    # Use sounddevice to capture audio
+    audio_data = []
+    with sd.InputStream(callback=callback):
         st.write("Listening... Please speak after a few seconds.")
-        #time.sleep(1)  
-        recognizer.adjust_for_ambient_noise(source)
+        time.sleep(3)  # Wait for 3 seconds of audio capture
 
-        try:
-            audio = recognizer.listen(source, timeout=3)  
-            st.write("Recognizing...")
-            text = recognizer.recognize_google(audio)
-            st.write("You said: ", text)
-            return text  
+    # Convert the recorded audio into an array suitable for SpeechRecognition
+    audio_np = np.concatenate(audio_data, axis=0)
+    audio = sr.AudioData(audio_np.tobytes(), int(sd.query_devices(sd.default.device, 'input')['default_samplerate']), 2)
 
-        except sr.WaitTimeoutError:
-            st.write("Listening timed out while waiting for phrase to start")
-            return "No speech detected"
+    try:
+        st.write("Recognizing...")
+        text = recognizer.recognize_google(audio)
+        st.write("You said: ", text)
+        return text
 
-        except sr.UnknownValueError:
-            st.write("Google Web Speech API could not understand audio")
-            return "Could not understand audio"
+    except sr.UnknownValueError:
+        st.write("Google Web Speech API could not understand audio")
+        return "Could not understand audio"
 
-        except sr.RequestError as e:
-            st.write(f"Could not request results from Google Web Speech API; {e}")
-            return "API error"
+    except sr.RequestError as e:
+        st.write(f"Could not request results from Google Web Speech API; {e}")
+        return "API error"
 
 # Main app logic
 if __name__ == "__main__":
@@ -256,3 +260,4 @@ if __name__ == "__main__":
             exec(python_code)
         except Exception as e:
             st.error(f"Error executing the Python code: {e}")
+
