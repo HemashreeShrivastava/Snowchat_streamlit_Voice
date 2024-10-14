@@ -6,5 +6,5 @@ matplotlib
 plotly_express
 scikit-learn
 SpeechRecognition
-portaudio19-dev
+portaudio
 
